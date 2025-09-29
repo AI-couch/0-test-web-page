@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Итоговая карточка — Mentoring (Cosmic)</title>
+  <meta name="description" content="Пошаговая итоговая карточка ученика: космический стиль, анимации, локальное сохранение (localStorage), экспорт JSON/Markdown.">
+  <style>
+    :root{
+      --bg1:#070b1a; --bg2:#0d1330; --accent:#7dd3fc; --accent-2:#a78bfa; --text:#e5f2ff;
+      --muted:#9fb2cf; --panel:#0b1226; --ok:#34d399; --warn:#f59e0b; --err:#f87171;
+      --glass:18px;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
+      color:var(--text); background: radial-gradient(80vw 80vh at 70% 20%, #0b1540, transparent 60%),
+                         radial-gradient(50vw 50vh at 0% 100%, #121e4a, transparent 60%),
+                         linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow-x:hidden;
+    }
+    /* Starfield canvas behind UI */
+    #stars{position:fixed; inset:0; z-index:0; pointer-events:none;}
+    header{padding:24px 20px 8px; text-align:center; position:relative; z-index:2;}
+    header h1{margin:0; font-size:clamp(22px, 3.5vw, 38px); letter-spacing:0.5px}
+    header p{margin:6px 0 0; color:var(--muted)}
+
+    .container{ width:min(980px, 92vw); margin: 12px auto 80px; position:relative; z-index:2; }
+    .card{
+      background: linear-gradient(180deg, #ffffff12, #ffffff08);
+      backdrop-filter: blur(10px) saturate(115%);
+      border:1px solid #ffffff22; border-radius: var(--glass); padding: 18px clamp(14px, 2vw, 24px);
+      box-shadow: 0 10px 30px #00000066; margin: 16px 0;
+      opacity:0; transform: translateY(12px) scale(0.985);
+      transition: opacity .5s ease, transform .6s cubic-bezier(.2,.65,.2,1);
+    }
+    .card.visible{opacity:1; transform: translateY(0) scale(1)}
+    .step-title{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.3px}
+    .step-idx{width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:#ffffff14; border:1px solid #ffffff2a}
+    .step-ok{margin-left:auto; font-size:13px; color:var(--ok); opacity:.9; display:none}
+    .card.done .step-ok{display:inline}
+
+    .row{display:grid; grid-template-columns: 1fr; gap:12px;}
+    @media(min-width:780px){.row{grid-template-columns: repeat(2, 1fr);} }
+    .full{grid-column: 1 / -1}
+
+    label{font-size: 13px; color: var(--muted); display:block; margin-bottom:6px}
+    input[type="text"], textarea, select{
+      width:100%; background:var(--panel); color:var(--text); border:1px solid #ffffff2a; border-radius:12px;
+      padding:12px 14px; outline:none; transition: border .2s ease, box-shadow .2s ease;
+    }
+    textarea{min-height:96px; resize:vertical}
+    input:focus, textarea:focus, select:focus{border-color:var(--accent); box-shadow: 0 0 0 3px #38bdf833}
+    .hint{font-size:12px; color:var(--muted)}
+
+    .taglist{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
+    .tag{padding:8px 12px; border-radius:999px; border:1px solid #ffffff2b; background:var(--panel); cursor:pointer; font-size:13px; user-select:none}
+    .tag.active{border-color: var(--accent); box-shadow: inset 0 0 0 2px #38bdf855; background:#0e1b36}
+
+    .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center}
+    .btn{
+      appearance:none; border:none; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer;
+      background: linear-gradient(180deg, var(--accent), var(--accent-2)); color:#06121f;
+      transition: transform .08s ease, filter .2s ease; box-shadow: 0 6px 18px #0ea5e955;
+    }
+    .btn:active{transform: translateY(1px)}
+    .btn.secondary{background: #1f2a44; color: var(--text); box-shadow:none; border:1px solid #ffffff22}
+    .btn[disabled]{filter:grayscale(0.5) brightness(0.8); cursor:not-allowed; opacity:.7}
+
+    .footer{color:#8ba0be; text-align:center; margin-top:22px; font-size:12px}
+    .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; background:#ffffff18; border:1px solid #ffffff22; border-radius:6px; padding:2px 5px}
+  </style>
+</head>
+<body>
+  <canvas id="stars" aria-hidden="true"></canvas>
+
+  <header>
+    <h1>Итоговая карточка ученика — Mentoring</h1>
+    <p>Космический лендинг с поэтапным заполнением и автосохранением (localStorage)</p>
+  </header>
+
+  <main class="container" id="app">
+    <!-- STEP 1: Знакомство и настроение -->
+    <section class="card" data-step="1" aria-labelledby="s1">
+      <div class="step-title"><div class="step-idx">1</div> <span id="s1">Знакомство</span> <span class="step-ok">✔ Готово</span></div>
+      <div class="row">
+        <div>
+          <label for="name">Имя ученика <span class="warn">*</span></label>
+          <input type="text" id="name" placeholder="Как тебя зовут?" autocomplete="name" />
+          <div class="hint">Это поможет персонализировать карточку.</div>
+        </div>
+        <div>
+          <label for="hobby">Что любишь делать в свободное время?</label>
+          <input type="text" id="hobby" placeholder="Игры / спорт / музыка / творчество…" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" data-next disabled>Дальше →</button>
+        <span class="hint">Подсказка: нажми <span class="kbd">Enter</span>, чтобы перейти дальше.</span>
+      </div>
+    </section>
+
+    <!-- STEP 2: Квиз — ценности и формат работы -->
+    <section class="card" data-step="2" aria-labelledby="s2">
+      <div class="step-title"><div class="step-idx">2</div> <span id="s2">Квиз: ценности и стиль</span> <span class="step-ok">✔ Готово</span></div>
+      <div class="row">
+        <div>
+          <label>Самостоятельно или в команде? <span class="warn">*</span></label>
+          <div class="taglist" data-group="team">
+            <div class="tag">Самостоятельно</div>
+            <div class="tag">В команде</div>
+          </div>
+        </div>
+        <div>
+          <label>Один большой проект или много маленьких? <span class="warn">*</span></label>
+          <div class="taglist" data-group="scope">
+            <div class="tag">Большой и сложный</div>
+            <div class="tag">Много маленьких</div>
+          </div>
+        </div>
+        <div>
+          <label>Польза другим vs Интерес/монетизация <span class="warn">*</span></label>
+          <div class="taglist" data-group="value">
+            <div class="tag">Польза людям важнее</div>
+            <div class="tag">Интересно и прибыльно</div>
+          </div>
+        </div>
+        <div>
+          <label>Видимый результат или «под капотом»? <span class="warn">*</span></label>
+          <div class="taglist" data-group="role">
+            <div class="tag">Красивый интерфейс</div>
+            <div class="tag">Надёжная логика</div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" data-next disabled>К витрине направлений →</button>
+        <span class="hint">Выбери по одному тегу в каждом блоке.</span>
+      </div>
+    </section>
+
+    <!-- STEP 3: Витрина направлений (мультивыбор) -->
+    <section class="card" data-step="3" aria-labelledby="s3">
+      <div class="step-title"><div class="step-idx">3</div> <span id="s3">Что откликается больше?</span> <span class="step-ok">✔ Готово</span></div>
+      <div class="row">
+        <div class="full">
+          <label>Направления <span class="warn">*</span></label>
+          <div class="taglist" data-group="tracks">
+            <div class="tag">Десктоп</div>
+            <div class="tag">Веб: визитки</div>
+            <div class="tag">Веб: сайты с БД</div>
+            <div class="tag">Игры в браузере</div>
+            <div class="tag">Социальные сети</div>
+            <div class="tag">Интернет-магазины</div>
+            <div class="tag">Расширения браузера</div>
+            <div class="tag">Боты (Telegram)</div>
+            <div class="tag">ИИ: зрение</div>
+            <div class="tag">ИИ: слух</div>
+            <div class="tag">ИИ: NLP/чат</div>
+            <div class="tag">Генеративная графика</div>
+            <div class="tag">IoT: робототехника</div>
+            <div class="tag">IoT: умный дом</div>
+            <div class="tag">Голосовые помощники</div>
+            <div class="tag">DevOps</div>
+          </div>
+          <div class="hint">Можно выбрать несколько тегов. Нужно выбрать как минимум один.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" data-next disabled>К формулировке проекта →</button>
+      </div>
+    </section>
+
+    <!-- STEP 4: Проект-мечта (коротко) -->
+    <section class="card" data-step="4" aria-labelledby="s4">
+      <div class="step-title"><div class="step-idx">4</div> <span id="s4">Проект-мечта (черновик)</span> <span class="step-ok">✔ Готово</span></div>
+      <div class="row">
+        <div>
+          <label for="audience">Для кого проект? <span class="warn">*</span></label>
+          <input id="audience" type="text" placeholder="для меня / друзей / семьи / школы…" />
+        </div>
+        <div>
+          <label for="value">Главная польза <span class="warn">*</span></label>
+          <input id="value" type="text" placeholder="что улучшит / ускорит / сделает веселее" />
+        </div>
+        <div class="full">
+          <label for="pitch">Короткое описание (1–2 предложения) <span class="warn">*</span></label>
+          <textarea id="pitch" placeholder="Опиши идею простыми словами"></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" data-next disabled>Финал →</button>
+        <button class="btn secondary" id="save">Сохранить сейчас</button>
+      </div>
+    </section>
+
+    <!-- STEP 5: Финал + экспорт -->
+    <section class="card" data-step="5" aria-labelledby="s5">
+      <div class="step-title"><div class="step-idx">5</div> <span id="s5">Результат</span></div>
+      <p class="hint">Проверь данные и сохрани локально. Можно экспортировать в JSON или Markdown.</p>
+      <div id="summary"></div>
+      <div class="actions">
+        <button class="btn" id="exportJson">Экспорт JSON</button>
+        <button class="btn secondary" id="exportMd">Экспорт Markdown</button>
+        <button class="btn secondary" id="reset">Сбросить прогресс</button>
+      </div>
+      <div class="footer">Данные сохраняются только в <span class="ok">localStorage</span> вашего браузера. Сайт работает офлайн и подходит для GitHub Pages.</div>
+    </section>
+  </main>
+
+  <script>
+    // ===== Starfield background (cosmic look) =====
+    const canvas = document.getElementById('stars');
+    const ctx = canvas.getContext('2d');
+    const DPR = Math.max(1, window.devicePixelRatio || 1);
+    let W, H, stars = [];
+
+    function resizeStars(){
+      W = canvas.width = innerWidth * DPR;
+      H = canvas.height = innerHeight * DPR;
+      canvas.style.width = innerWidth + 'px';
+      canvas.style.height = innerHeight + 'px';
+      spawnStars();
+    }
+    function spawnStars(n = 260){
+      stars = Array.from({length:n}, () => ({
+        x: Math.random()*W,
+        y: Math.random()*H,
+        r: Math.random()*1.6*DPR,
+        a: 0.35 + Math.random()*0.65,
+        s: 0.12 + Math.random()*0.35
+      }));
+    }
+    function drawStars(){
+      ctx.clearRect(0,0,W,H);
+      for(const st of stars){
+        st.y -= st.s; if(st.y < -5) st.y = H + 5;
+        ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(255,255,255,${st.a})`; ctx.fill();
+      }
+      requestAnimationFrame(drawStars);
+    }
+    addEventListener('resize', resizeStars);
+    resizeStars(); drawStars();
+
+    // ===== Form logic =====
+    const LS_KEY = 'mentoring_result_v2';
+    const $ = (sel, ctx=document) => ctx.querySelector(sel);
+    const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+    const cards = $$('.card');
+
+    // Toggle tags (single or multi)
+    $$('.taglist[data-group]').forEach(group => {
+      group.addEventListener('click', e => {
+        const tag = e.target.closest('.tag'); if(!tag) return;
+        const name = group.dataset.group;
+        const multi = (name === 'tracks');
+        if(!multi){
+          $$('.tag', group).forEach(t => t.classList.remove('active'));
+          tag.classList.add('active');
+        } else {
+          tag.classList.toggle('active');
+        }
+        saveState(); updateUI();
+      });
+    });
+
+    // Inputs autosave
+    ['name','hobby','audience','value','pitch'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('input', debounce(() => { saveState(); updateUI(); }, 120));
+    });
+
+    // Next buttons + validation + keyboard enter
+    $$('[data-next]').forEach(btn => {
+      btn.addEventListener('click', () => advance(btn));
+      btn.closest('.card').addEventListener('keydown', e => {
+        if(e.key === 'Enter' && !e.shiftKey){
+          e.preventDefault();
+          if(!btn.disabled) advance(btn);
+        }
+      });
+    });
+
+    $('#save').addEventListener('click', () => { saveState(true); });
+    $('#reset').addEventListener('click', () => { localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY+':step'); location.reload(); });
+    $('#exportJson').addEventListener('click', exportJSON);
+    $('#exportMd').addEventListener('click', exportMarkdown);
+
+    function advance(btn){
+      const cur = +btn.closest('.card').dataset.step;
+      if(!validateStep(cur)) return;
+      showStep(cur+1);
+      saveState();
+      focusFirstField(cur+1);
+    }
+
+    function getState(){
+      const sel = (group, multi=false) => {
+        const g = document.querySelector(`.taglist[data-group="${group}"]`);
+        if(!g) return multi?[]:'';
+        const active = $$('.tag.active', g).map(t => t.textContent.trim());
+        return multi ? active : (active[0] || '');
+      };
+      return {
+        name: $('#name').value.trim(),
+        hobby: $('#hobby').value.trim(),
+        team: sel('team'),
+        scope: sel('scope'),
+        valuePref: sel('value'),
+        role: sel('role'),
+        tracks: sel('tracks', true),
+        audience: $('#audience').value.trim(),
+        value: $('#value').value.trim(),
+        pitch: $('#pitch').value.trim(),
+        ts: new Date().toISOString(),
+        step: +(localStorage.getItem(LS_KEY+':step') || 1),
+      };
+    }
+
+    function setState(s){
+      if(!s) return;
+      $('#name').value = s.name || '';
+      $('#hobby').value = s.hobby || '';
+      mark('team', s.team);
+      mark('scope', s.scope);
+      mark('value', s.valuePref);
+      mark('role', s.role);
+      markMulti('tracks', s.tracks || []);
+      $('#audience').value = s.audience || '';
+      $('#value').value = s.value || '';
+      $('#pitch').value = s.pitch || '';
+      showStep(Math.max(1, s.step || 1));
+    }
+
+    function saveState(force = false){
+      try{
+        const s = getState();
+        localStorage.setItem(LS_KEY, JSON.stringify(s));
+        if(force) toast('Сохранено', 'ok');
+      }catch(err){
+        console.error('saveState failed:', err);
+      }
+    }
+
+    function mark(group, val){
+      const g = document.querySelector(`.taglist[data-group="${group}"]`); if(!g) return;
+      $$('.tag', g).forEach(t => { t.classList.toggle('active', t.textContent.trim() === val); });
+    }
+    function markMulti(group, list){
+      const g = document.querySelector(`.taglist[data-group="${group}"]`); if(!g) return;
+      $$('.tag', g).forEach(t => { t.classList.toggle('active', list.includes(t.textContent.trim())); });
+    }
+
+    // Полная валидация (с тостами для UX при попытке перейти дальше)
+    function validateStep(step){
+      if(step === 1){
+        return check($('#name').value.trim(), 'Введите имя');
+      }
+      if(step === 2){
+        const groups = ['team','scope','value','role'];
+        for(const g of groups){
+          const root = document.querySelector(`.taglist[data-group="${g}"]`);
+          if(!$('.tag.active', root)) return toast('Выберите варианты в блоках квиза', 'warn'), false;
+        }
+        return true;
+      }
+      if(step === 3){
+        const tracks = $$('.tag.active', document.querySelector('.taglist[data-group="tracks"]'));
+        if(tracks.length < 1) return toast('Выберите минимум одно направление', 'warn'), false;
+        return true;
+      }
+      if(step === 4){
+        if(!$('#audience').value.trim() || !$('#value').value.trim() || !$('#pitch').value.trim()){
+          return toast('Заполните поля проекта', 'warn'), false;
+        }
+        return true;
+      }
+      return true;
+    }
+
+    // Тихая валидация (без тостов) — для updateUI()/done
+    function isStepValid(step){
+      if(step === 1){
+        return !!$('#name').value.trim();
+      }
+      if(step === 2){
+        const groups = ['team','scope','value','role'];
+        return groups.every(g => {
+          const root = document.querySelector(`.taglist[data-group="${g}"]`);
+          return !!$('.tag.active', root);
+        });
+      }
+      if(step === 3){
+        const tracks = $$('.tag.active', document.querySelector('.taglist[data-group="tracks"]'));
+        return tracks.length >= 1;
+      }
+      if(step === 4){
+        return !!$('#audience').value.trim() && !!$('#value').value.trim() && !!$('#pitch').value.trim();
+      }
+      return true;
+    }
+
+    function check(v, msg){ if(!v){ toast(msg, 'warn'); return false } return true }
+
+    function showStep(n){
+      cards.forEach(c => {
+        const step = +c.dataset.step;
+        c.classList.toggle('visible', step <= n);
+        c.classList.toggle('done', step < n && isStepValid(step));
+      });
+      localStorage.setItem(LS_KEY+':step', n);
+      if(n >= 5) renderSummary();
+      updateUI();
+    }
+
+    function updateUI(){
+      // Enable/disable Next buttons depending on silent validation of current step
+      cards.forEach(card => {
+        const next = $('[data-next]', card);
+        if(!next) return;
+        const step = +card.dataset.step;
+        next.disabled = !isStepValid(step);
+      });
+    }
+
+    function renderSummary(){
+      const s = getState();
+      $('#summary').innerHTML = `
+        <div class="row">
+          <div>
+            <h3>Ученик</h3>
+            <p><b>Имя:</b> ${e(s.name)}<br/>
+               <b>Хобби:</b> ${e(s.hobby || '-')}</p>
+            <h3>Ценности и стиль</h3>
+            <p><b>Работа:</b> ${e(s.team || '-')}<br/>
+               <b>Масштаб:</b> ${e(s.scope || '-')}<br/>
+               <b>Приоритет:</b> ${e(s.valuePref || '-')}<br/>
+               <b>Роль:</b> ${e(s.role || '-')}</p>
+          </div>
+          <div>
+            <h3>Направления</h3>
+            <p>${(s.tracks || []).map(t => `<span class=\"tag active\">${e(t)}</span>`).join(' ') || '-'}</p>
+            <h3>Проект-мечта</h3>
+            <p><b>Для кого:</b> ${e(s.audience)}<br/>
+               <b>Польза:</b> ${e(s.value)}<br/>
+               <b>Описание:</b> ${e(s.pitch)}</p>
+          </div>
+        </div>`;
+    }
+
+    function exportJSON(){
+      const s = getState();
+      const blob = new Blob([JSON.stringify(s, null, 2)], {type:'application/json'});
+      downloadBlob(blob, `mentoring_result_${(s.name||'student').replace(/\s+/g,'_')}.json`);
+    }
+
+    function exportMarkdown(){
+      const s = getState();
+      const md = [
+        `# Итоговая карточка — ${s.name || 'Ученик'}`,
+        '',
+        `**Хобби:** ${s.hobby || '-'}`,
+        '',
+        '## Ценности и стиль',
+        `- Работа: ${s.team || '-'}`,
+        `- Масштаб: ${s.scope || '-'}`,
+        `- Приоритет: ${s.valuePref || '-'}`,
+        `- Роль: ${s.role || '-'}`,
+        '',
+        '## Направления',
+        `${(s.tracks || []).map(t => '- ' + t).join('\n') || '-'}`,
+        '',
+        '## Проект-мечта',
+        `- Для кого: ${s.audience}`,
+        `- Польза: ${s.value}`,
+        `- Описание: ${s.pitch}`,
+        '',
+        `_Сгенерировано: ${new Date().toLocaleString()}_`
+      ].join('\n');
+      const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+      downloadBlob(blob, `mentoring_result_${(s.name||'student').replace(/\s+/g,'_')}.md`);
+    }
+
+    function downloadBlob(blob, filename){
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    function toast(msg, type='ok'){
+      const t = document.createElement('div');
+      t.textContent = msg;
+      Object.assign(t.style, {
+        position:'fixed', left:'50%', top:'20px', transform:'translateX(-50%)',
+        padding:'10px 14px', borderRadius:'12px', zIndex:9999,
+        backdropFilter:'blur(8px)', background:'#0b1226cc', color:'var(--text)',
+        border:'1px solid ' + (type==='warn' ? 'var(--warn)' : type==='err' ? 'var(--err)' : '#ffffff22')
+      });
+      document.body.appendChild(t);
+      setTimeout(()=>{ t.style.transition='opacity .4s'; t.style.opacity='0'; }, 1600);
+      setTimeout(()=> t.remove(), 2100);
+    }
+
+    function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); } }
+    const e = s => (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
+
+    function focusFirstField(step){
+      if(step === 2){ document.querySelector(`.taglist[data-group="team"] .tag`)?.focus?.(); }
+      if(step === 3){ document.querySelector(`.taglist[data-group="tracks"] .tag`)?.focus?.(); }
+      if(step === 4){ document.getElementById('audience')?.focus?.(); }
+      if(step === 5){ document.getElementById('exportJson')?.focus?.(); }
+    }
+
+    // Bootstrap: restore saved state and step
+    (function init(){
+      try {
+        const saved = localStorage.getItem(LS_KEY);
+        if(saved){ setState(JSON.parse(saved)); } else { showStep(1); }
+      } catch(e){ showStep(1); }
+      updateUI();
+      // автофокус на имя при первом заходе
+      if((+localStorage.getItem(LS_KEY+':step') || 1) === 1){ document.getElementById('name')?.focus?.(); }
+    })();
+  </script>
+</body>
+</html>
